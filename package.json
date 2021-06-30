@@ -19,5 +19,8 @@
   "homepage": "https://github.com/revarcline/feathers-basics#readme",
   "dependencies": {
     "@feathersjs/feathers": "^4.5.11"
+  },
+  "devDependencies": {
+    "eslint": "^7.29.0"
   }
 }

@@ -1,5 +1,6 @@
 const feathers = require('@feathersjs/feathers')
-const app = feathers()
+const express = require('@feathersjs/express')
+const socketio = require('@feathersjs/socketio')
 
 // message service that allows to create new
 // and return all existing messages
@@ -27,28 +28,36 @@ class MessageService {
   }
 }
 
-//register the message service on the feathers application
-app.use('messages', new MessageService())
+const app = express(feathers())
 
-// log every time a new message has been created
-app.service('messages').on('created', message => {
-  console.log('A new message has been created', message)
+// parse http json bodies
+app.use(express.json())
+// parse url-encoded params
+app.use(express.urlencoded({extended: true}))
+// host static files on the current folder
+app.use(express.static(__dirname))
+// rest api support
+app.configure(express.rest())
+// configure socket.io real-time apis
+app.configure(socketio())
+// register an in-memory messages service
+app.use('/messages', new MessageService())
+// register a nicer error handler than the default express one
+app.use(express.errorHandler())
+
+// add any new real-time connection to the 'everybody' channel
+app.on('connection', connection => app.channel('everybody').join(connection))
+
+// publish all events to everybody channel
+app.publish(data => app.channel('everybody'))
+
+
+// start the server
+app.listen(3030).on('listening', () =>
+  console.log('Feathers server listening on localhost:3030')
+)
+
+// also a message so the api ain't empty
+app.service('messages').create({
+  text: 'Hello world from the server'
 })
-
-// a function that creates new messages and logs existing ones
-const main = async () => {
-  // create a new message
-  await app.service('messages').create({
-    text: 'Hello Feathers'
-  })
-
-  await app.service('messages').create({
-    text: 'Hello again'
-  })
-
-  // find existing messages
-  const messages = await app.service('messages').find()
-  console.log('All messages', messages)
-}
-
-main()
